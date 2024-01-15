@@ -3,24 +3,27 @@ import React from "react";
 import { Button as MaterialButton, Paper, Box, Typography, Grid, Chip, FormControl, FormLabel, Slider, Switch, FormControlLabel } from "@material-ui/core";
 
 const Text = ({ text, fontSize }) => {
+  const { connectors: { connect, drag } } = useNode();
   return (
-    <div>
+    <div ref={ref => connect(drag(ref))}>
       <p style={{ fontSize }}>{text}</p>
     </div>
   )
 }
 
 const Button = ({ size, variant, color, children }) => {
+  const { connectors: { connect, drag } } = useNode();
   return (
-    <MaterialButton size={size} variant={variant} color={color}>
+    <MaterialButton ref={ref => connect(drag(ref))} size={size} variant={variant} color={color}>
       {children}
     </MaterialButton>
   )
 }
 
 const Container = ({ background, padding = 0, children }) => {
+  const { connectors: { connect, drag } } = useNode()
   return (
-    <Paper style={{ margin: "5px 0", background, padding: `${padding}px` }}>
+    <Paper ref={ref => connect(drag(ref))} style={{ margin: "5px 0", background, padding: `${padding}px` }}>
       {children}
     </Paper>
   )
@@ -115,21 +118,21 @@ const Topbar = () => {
   )
 };
 
-// Text.craft = {
-//   props: {
-//     text: "Hi there!",
-//     fontSize: 12
-//   },
-//   rules: {
-//     canDrop: () => true,
-//     canDrag: (node) => !!node.data.props.text === 'Drag',
-//     canMoveIn: () => true,
-//     canMoveOut: () => true
-//   },
-//   related: {
+Text.craft = {
+  props: {
+    // text: "Hi there!",
+    // fontSize: 12
+  },
+  rules: {
+    // canDrop: () => true,
+    canDrag: (node) => node.data.props.text !== 'Drag',
+    // canMoveIn: () => true,
+    // canMoveOut: () => true
+  },
+  related: {
 
-//   }
-// }
+  }
+}
 
 
 
@@ -137,20 +140,33 @@ function BasicGuide() {
   return (
     <div style={{ margin: "0 auto", width: "800px" }}>
       <Typography variant="h5" align="center">A super simple page editor</Typography>
-      <Grid container spacing={3} style={{ paddingTop: "10px" }}>
-        <Topbar />
-        <Grid item xs>
-          <Container padding={5} background="#eee">
-            <Card />
-          </Container>
+      <Editor resolver={{ Card, Button, Text, Container }}>
+        <Grid container spacing={3} style={{ paddingTop: "10px" }}>
+          <Topbar />
+          <Grid item xs>
+            <Frame>
+              <Element is={Container} padding={5} background={'#eee'} canvas>
+                {/* <Container padding={5} background="#eee"> */}
+                <Card />
+                <Button size="small" variant="outlined">Click Me</Button>
+                <Text size="small" text="Hi world!" />
+                <Element is={Container} padding={2} background={'#999'} canvas>
+                  {/* <Container padding={6} background="#999"> */}
+                  <Text size="small" text="It's me again!" />
+                  {/* </Container> */}
+                </Element>
+                {/* </Container> */}
+              </Element>
+            </Frame>
+          </Grid>
+          <Grid item xs={3}>
+            <Paper>
+              <Toolbox />
+              <SettingsPanel />
+            </Paper>
+          </Grid>
         </Grid>
-        <Grid item xs={3}>
-          <Paper>
-            <Toolbox />
-            <SettingsPanel />
-          </Paper>
-        </Grid>
-      </Grid>
+      </Editor>
     </div>
   );
 }
