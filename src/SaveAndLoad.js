@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import ContentEditable from 'react-contenteditable'
 import { Button as MaterialButton, Paper, Box, Typography, Grid, Chip, FormControl, FormLabel, Slider, Switch, FormControlLabel, RadioGroup, Radio } from "@material-ui/core";
 import ColorPicker from "material-ui-color-picker";
+import lz from 'lzutf8'
 
 const Text = ({ text, fontSize, textAlign }) => {
   const { connectors: { connect, drag }, actions: { setProp }, hasSelectedNode, hasDraggedNode } = useNode((state) => ({
@@ -357,6 +358,8 @@ Text.craft = {
 
 
 function SaveAndLoad() {
+  console.log(lz)
+
   return (
     <div style={{ margin: "0 auto", width: "800px" }}>
       <Typography variant="h5" align="center">A super simple page editor</Typography>
