@@ -1,9 +1,10 @@
 import { useNode, Editor, Element, Frame, useEditor } from "@craftjs/core";
 import React, { useEffect, useState } from "react";
 import ContentEditable from 'react-contenteditable'
-import { Button as MaterialButton, Paper, Box, Typography, Grid, Chip, FormControl, FormLabel, Slider, Switch, FormControlLabel, RadioGroup, Radio } from "@material-ui/core";
+import { Button as MaterialButton, Paper, Box, Typography, Grid, Chip, FormControl, FormLabel, Slider, Switch, FormControlLabel, RadioGroup, Radio, Snackbar, Dialog, DialogTitle, DialogContent, TextField, DialogActions } from "@material-ui/core";
 import ColorPicker from "material-ui-color-picker";
-import lz from 'lzutf8'
+import lz from 'lzutf8';
+import copy from "copy-to-clipboard";
 
 const Text = ({ text, fontSize, textAlign }) => {
   const { connectors: { connect, drag }, actions: { setProp }, hasSelectedNode, hasDraggedNode } = useNode((state) => ({
@@ -210,7 +211,7 @@ const Toolbox = () => {
 
   return (
     <Box px={2} py={2}>
-      <Grid container direction="column" alignItems="center" justify="center" spacing={1}>
+      <Grid container direction="column" alignItems="center" spacing={1}>
         <Box pb={2}>
           <Typography>Drag to add</Typography>
         </Box>
@@ -297,6 +298,10 @@ const Topbar = () => {
     enabled: state.options.enabled
   }))
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [stateToLoad, setStateToLoad] = useState(null);
+  const [snackbarMessage, setSnackbarMessage] = useState();
+
   return (
     <Box px={1} py={1} mt={3} mb={1} bgcolor="#cbe8e7">
       <Grid container alignItems="center">
@@ -307,9 +312,76 @@ const Topbar = () => {
           />
         </Grid>
         <Grid item>
-          <MaterialButton size="small" variant="outlined" color="secondary" onClick={() => {
+          {/* <MaterialButton size="small" variant="outlined" color="secondary" onClick={() => {
             console.log(query.serialize())
-          }}>Serialize JSON to console</MaterialButton>
+          }}>Serialize JSON to console</MaterialButton> */}
+          <MaterialButton
+            className="copy-state-btn"
+            size="small"
+            variant="outlined"
+            color="secondary"
+            onClick={() => {
+              const json = query.serialize();
+              copy(lz.encodeBase64(lz.compress(json)))
+              setSnackbarMessage('State copied to clipboard')
+            }}
+          >
+            Copy current state
+          </MaterialButton>
+          <MaterialButton
+            className="load-state-btn"
+            size="small"
+            variant="outlined"
+            color="secondary"
+            onClick={() => setDialogOpen(true)}
+          >
+            Load
+          </MaterialButton>
+          <Dialog
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            fullWidth
+            maxWidth="md"
+          >
+            <DialogTitle id="alert-dialog-title">Load state</DialogTitle>
+            <DialogContent>
+              <TextField
+                multiline
+                fullWidth
+                placeholder='Paste the contents that was copied from the "Copy Current State" button'
+                size="small"
+                value={stateToLoad}
+                onChange={e => {
+                  setStateToLoad(e.target.value);
+                  window.localStorage.setItem('stateJson', e.target.value)
+                }}
+              />
+            </DialogContent>
+            <DialogActions>
+              <MaterialButton onClick={() => setDialogOpen(false)} color="primary">
+                Cancel
+              </MaterialButton>
+              <MaterialButton
+                onClick={() => {
+                  setDialogOpen(false);
+                  const json = lz.decompress(lz.decodeBase64(stateToLoad))
+                  actions.deserialize(json);
+                  setSnackbarMessage("State loaded")
+                }}
+                color="primary"
+                autoFocus
+              >
+                Load
+              </MaterialButton>
+            </DialogActions>
+          </Dialog>
+          <Snackbar
+            autoHideDuration={1000}
+            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            open={!!snackbarMessage}
+            onClose={() => setSnackbarMessage(null)}
+            message={<span>{snackbarMessage}</span>}
+          />
         </Grid>
       </Grid>
     </Box>
@@ -358,29 +430,44 @@ Text.craft = {
 
 
 function SaveAndLoad() {
-  console.log(lz)
+
+  const [enabled, setEnabled] = useState(false);
+  const [json, setJson] = useState(null);
+
+  // Load save state from server on page load
+  useEffect(() => {
+    // const stateToLoad = await fetch("your api to get the compressed data")
+    // const json = lz.decompress(lz.decodeBase64(stateToLoad));
+    // setJson(json);
+    // 这里是请求，请求的api到了，在进行初始化Frame，因为Frame的属性是 memoized 的
+    let tempJson = window.localStorage.getItem('stateJson');
+    const json = lz.decompress(lz.decodeBase64(tempJson));
+    setJson(json);
+  }, [])
 
   return (
     <div style={{ margin: "0 auto", width: "800px" }}>
       <Typography variant="h5" align="center">A super simple page editor</Typography>
-      <Editor resolver={{ Card, Button, Text, Container, CardTop, CardBottom }}>
+      <Editor resolver={{ Card, Button, Text, Container, CardTop, CardBottom }} enabled={enabled}>
         <Grid container spacing={3} style={{ paddingTop: "10px" }}>
           <Topbar />
           <Grid item xs>
-            <Frame>
-              <Element is={Container} padding={5} background={'#eee'} canvas>
-                {/* <Container padding={5} background="#eee"> */}
-                <Card />
-                <Button size="small" variant="outlined">Click Me</Button>
-                <Text size="small" text="Hi world!" />
-                <Element is={Container} padding={2} background={'#999'} canvas>
-                  {/* <Container padding={6} background="#999"> */}
-                  <Text size="small" text="It's me again!" />
+            {
+              json && <Frame data={json}>
+                <Element is={Container} padding={5} background={'#eee'} canvas>
+                  {/* <Container padding={5} background="#eee"> */}
+                  <Card />
+                  <Button size="small" variant="outlined">Click Me</Button>
+                  <Text size="small" text="Hi world!" />
+                  <Element is={Container} padding={2} background={'#999'} canvas>
+                    {/* <Container padding={6} background="#999"> */}
+                    <Text size="small" text="It's me again!" />
+                    {/* </Container> */}
+                  </Element>
                   {/* </Container> */}
                 </Element>
-                {/* </Container> */}
-              </Element>
-            </Frame>
+              </Frame>
+            }
           </Grid>
           <Grid item xs={3}>
             <Paper>
